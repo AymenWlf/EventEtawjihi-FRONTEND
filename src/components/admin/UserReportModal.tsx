@@ -131,10 +131,134 @@ const UserReportModal: React.FC<UserReportModalProps> = ({ userId, onClose }) =>
                                  testData.currentStep?.interests || 
                                  testData.academicInterests || 
                                  {},
-                careerCompatibility: testData.currentStep?.careerCompatibility?.careers || 
-                                   testData.currentStep?.careerCompatibility || 
-                                   testData.careerCompatibility || 
-                                   {},
+                careerCompatibility: (() => {
+                    // Extraire careerCompatibility avec toutes les structures possibles
+                    let careerData = testData.currentStep?.careerCompatibility || 
+                                    testData.currentStep?.careers || 
+                                    testData.careerCompatibility || 
+                                    {};
+                    
+                    // Si careerData a une propriété careers, l'utiliser
+                    if (careerData?.careers && typeof careerData.careers === 'object') {
+                        careerData = careerData.careers;
+                    }
+                    
+                    // Construire detailedResponses à partir de enrichedCareerData ou careersEvaluated
+                    let detailedResponses: Record<string, any> = {};
+                    if (careerData?.enrichedCareerData) {
+                        Object.entries(careerData.enrichedCareerData).forEach(([careerName, data]: [string, any]) => {
+                            detailedResponses[careerName] = {
+                                careerName: careerName,
+                                sector: data.sector,
+                                difficultyLevel: data.accessibility || 'Moyenne',
+                                attractionLevel: data.attractionLevel,
+                                accessibilityPerceived: data.accessibilityPerceived
+                            };
+                        });
+                    } else if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                        careerData.careersEvaluated.forEach((career: any) => {
+                            detailedResponses[career.name] = {
+                                careerName: career.name,
+                                sector: career.sector,
+                                difficultyLevel: 'Moyenne',
+                                attractionLevel: career.attractionLevel,
+                                accessibilityPerceived: career.accessibilityPerceived
+                            };
+                        });
+                    } else if (careerData?.detailedResponses) {
+                        detailedResponses = careerData.detailedResponses;
+                    }
+                    
+                    // Normaliser careerAttractions si nécessaire
+                    // Les données peuvent être stockées comme {careerName: {attractionLevel: number, riasecWeights: ...}}
+                    // mais OrientationReportQuick attend {careerName: number}
+                    let normalizedAttractions: Record<string, number> = {};
+                    if (careerData?.careerAttractions && typeof careerData.careerAttractions === 'object') {
+                        Object.entries(careerData.careerAttractions).forEach(([careerName, value]: [string, any]) => {
+                            if (typeof value === 'number') {
+                                normalizedAttractions[careerName] = value;
+                            } else if (value && typeof value === 'object' && value.attractionLevel !== undefined) {
+                                normalizedAttractions[careerName] = value.attractionLevel;
+                            }
+                        });
+                    }
+                    
+                    // Si careerAttractions est vide mais que detailedResponses existe, construire à partir de detailedResponses
+                    if (Object.keys(normalizedAttractions).length === 0 && Object.keys(detailedResponses).length > 0) {
+                        Object.entries(detailedResponses).forEach(([careerName, details]: [string, any]) => {
+                            if (details.attractionLevel !== undefined && details.attractionLevel !== null) {
+                                normalizedAttractions[careerName] = details.attractionLevel;
+                            }
+                        });
+                    }
+                    
+                    // Construire sectorStats à partir de sectorScores et careersEvaluated/enrichedCareerData
+                    let sectorStats: any[] = [];
+                    if (careerData?.sectorScores && typeof careerData.sectorScores === 'object') {
+                        // Compter les carrières par secteur
+                        const sectorCounts: Record<string, number> = {};
+                        if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                            careerData.careersEvaluated.forEach((career: any) => {
+                                if (career.sector) {
+                                    sectorCounts[career.sector] = (sectorCounts[career.sector] || 0) + 1;
+                                }
+                            });
+                        } else if (careerData?.enrichedCareerData) {
+                            Object.values(careerData.enrichedCareerData).forEach((data: any) => {
+                                if (data.sector) {
+                                    sectorCounts[data.sector] = (sectorCounts[data.sector] || 0) + 1;
+                                }
+                            });
+                        } else if (Object.keys(detailedResponses).length > 0) {
+                            // Compter à partir de detailedResponses
+                            Object.values(detailedResponses).forEach((details: any) => {
+                                if (details.sector) {
+                                    sectorCounts[details.sector] = (sectorCounts[details.sector] || 0) + 1;
+                                }
+                            });
+                        }
+                        
+                        // Construire sectorStats
+                        sectorStats = Object.entries(careerData.sectorScores)
+                            .map(([sector, score]: [string, any]) => ({
+                                sector,
+                                attractionScore: typeof score === 'number' ? score : 0,
+                                careersEvaluated: sectorCounts[sector] || 0
+                            }))
+                            .sort((a, b) => b.attractionScore - a.attractionScore);
+                    }
+                    
+                    // Normaliser preferenceResponses à partir de workPreferences
+                    let preferenceResponses: Record<string, any> = {};
+                    if (careerData?.workPreferences) {
+                        preferenceResponses = {
+                            workStyle: careerData.workPreferences.workStyle || '',
+                            priority: careerData.workPreferences.priority || '',
+                            sector: careerData.workPreferences.sector || ''
+                        };
+                    } else if (careerData?.preferenceResponses) {
+                        preferenceResponses = careerData.preferenceResponses;
+                    }
+                    
+                    // Retourner les données normalisées avec toutes les propriétés nécessaires
+                    const normalizedCareerCompatibility = {
+                        ...careerData,
+                        careerAttractions: Object.keys(normalizedAttractions).length > 0 ? normalizedAttractions : (careerData.careerAttractions || {}),
+                        detailedResponses: Object.keys(detailedResponses).length > 0 ? detailedResponses : (careerData.detailedResponses || {}),
+                        sectorScores: careerData.sectorScores || {},
+                        sectorStats: sectorStats.length > 0 ? sectorStats : (careerData.sectorStats || []),
+                        preferenceResponses: Object.keys(preferenceResponses).length > 0 ? preferenceResponses : (careerData.preferenceResponses || {})
+                    };
+                    
+                    // Log pour débogage
+                    console.log("🔍 Normalisation careerCompatibility dans UserReportModal:");
+                    console.log("  - detailedResponses count:", Object.keys(normalizedCareerCompatibility.detailedResponses).length);
+                    console.log("  - careerAttractions count:", Object.keys(normalizedCareerCompatibility.careerAttractions).length);
+                    console.log("  - sectorStats count:", normalizedCareerCompatibility.sectorStats.length);
+                    console.log("  - sectorScores count:", Object.keys(normalizedCareerCompatibility.sectorScores).length);
+                    
+                    return normalizedCareerCompatibility;
+                })(),
                 constraints: testData.currentStep?.constraints?.constraints || 
                            testData.currentStep?.constraints || 
                            testData.constraints || 
@@ -235,10 +359,10 @@ const UserReportModal: React.FC<UserReportModalProps> = ({ userId, onClose }) =>
         );
     }
 
-    // Sinon, afficher le modal normal pour l'état du test
-    return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-2 sm:top-4 mx-auto p-0 border shadow-lg rounded-md bg-white max-w-6xl w-full mb-2 sm:mb-4 m-2 sm:m-4">
+        // Sinon, afficher le modal normal pour l'état du test
+        return (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+                <div className="relative mx-auto p-0 border shadow-lg rounded-md bg-white max-w-6xl w-full">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
                     <h3 className="text-lg font-bold text-gray-900">
                         {showFullReport ? 'Rapport Complet' : 'État du Test'}

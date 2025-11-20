@@ -38,8 +38,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, onClose, onSave }) 
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-4 sm:top-10 lg:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white m-4 sm:m-0">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className="relative mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">Modifier l'utilisateur</h3>
                     <button

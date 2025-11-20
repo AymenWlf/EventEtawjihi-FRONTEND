@@ -1,5 +1,6 @@
 export interface AdminUser {
     id: number;
+    userCode: string | null;
     firstName: string | null;
     lastName: string | null;
     email: string;
@@ -9,6 +10,7 @@ export interface AdminUser {
     lastLoginAt: string | null;
     isPresent: boolean;
     qrCode: string | null;
+    passwordPlain?: string | null;
     testStatus: 'non_commencé' | 'en_cours' | 'finalisé';
     currentStep: string | null;
     testCompleted: boolean;

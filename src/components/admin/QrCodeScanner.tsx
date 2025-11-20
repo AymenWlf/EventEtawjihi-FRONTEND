@@ -201,8 +201,8 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({ onClose, onScan, onUserSc
         : null;
 
         return (
-            <div className="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50">
-                <div className="relative top-2 sm:top-4 mx-auto p-3 sm:p-4 lg:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white m-2 sm:m-4">
+            <div className="fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+                <div className="relative mx-auto p-3 sm:p-4 lg:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
                         <h3 className="text-base sm:text-lg font-bold text-gray-900">Scanner QR Code</h3>
                         <button

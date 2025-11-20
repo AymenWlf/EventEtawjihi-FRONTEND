@@ -136,7 +136,7 @@ function AppContentQuick() {
         // Normaliser les données pour s'assurer que la structure est correcte
         setUserData(prev => {
           const normalizedData = {
-            ...prev,
+          ...prev,
             ...stepData,
             // S'assurer que personalInfo est accessible directement
             personalInfo: stepData.personalInfo || stepData.currentStep?.personalInfo?.personalInfo || stepData.currentStep?.personalInfo || prev.personalInfo,
@@ -491,14 +491,14 @@ function AppContentQuick() {
           )}
 
           <div className="p-8">
-            <CurrentComponent
-              onComplete={handleStepComplete}
-              onPrevious={handlePrevStep}
-              canGoBack={currentStep > 1}
-              onLanguageChange={setLanguage}
-              userData={userData}
-              language={language}
-            />
+              <CurrentComponent
+                onComplete={handleStepComplete}
+                onPrevious={handlePrevStep}
+                canGoBack={currentStep > 1}
+                onLanguageChange={setLanguage}
+                userData={userData}
+                language={language}
+              />
           </div>
         </div>
       </div>

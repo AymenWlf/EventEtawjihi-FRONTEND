@@ -692,23 +692,15 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onComplete, onPrevi
             type="tel"
             value={formData.phoneNumber}
             onChange={(e) => handleChange('phoneNumber', e.target.value)}
-            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-              isAuthenticated && formData.phoneNumber ? 'bg-gray-100 cursor-not-allowed' : ''
-            }`}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder={language === 'ar' ? '06XXXXXXXX' : '06XXXXXXXX'}
             required
-            disabled={isAuthenticated && !!formData.phoneNumber}
-            readOnly={isAuthenticated && !!formData.phoneNumber}
           />
           <p className="text-xs text-gray-500 mt-1">
             {isAuthenticated && formData.phoneNumber ? (
               language === 'ar'
-                ? 'رقم الهاتف مأخوذ من حسابك المسجل'
-                : 'Numéro de téléphone récupéré depuis votre compte'
-            ) : isAuthenticated && !formData.phoneNumber ? (
-              language === 'ar'
-                ? 'يرجى إدخال رقم الهاتف الخاص بك'
-                : 'Veuillez saisir votre numéro de téléphone'
+                ? 'يمكنك تعديل رقم الهاتف إذا لزم الأمر'
+                : 'Vous pouvez modifier le numéro de téléphone si nécessaire'
             ) : (
               language === 'ar'
                 ? 'مثال: 0612345678'

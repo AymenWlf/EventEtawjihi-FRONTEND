@@ -317,8 +317,8 @@ const CreateStaffModal: React.FC<CreateStaffModalProps> = ({ onClose, onSave }) 
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
                 <div className="mt-3">
                     <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Ajouter un membre du staff</h3>
                     <form onSubmit={handleSubmit} className="space-y-4">

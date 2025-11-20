@@ -100,3 +100,4 @@ export const getRiasecLetters = (): RiasecType[] => {
   return Object.keys(RIASEC_COLORS) as RiasecType[];
 };
 
+

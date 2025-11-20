@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { SearchIcon, EditIcon, EyeIcon, FileTextIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon, DownloadIcon, PlusIcon } from 'lucide-react';
+import { SearchIcon, EditIcon, EyeIcon, FileTextIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon, DownloadIcon, PlusIcon, MessageCircleIcon } from 'lucide-react';
 import { getAdminUsers, updateAdminUserPresence, type AdminUser } from '../../config/api';
 import { apiClient } from '../../config/api';
 import EditUserModal from './EditUserModal';
 import CreateUserModal from './CreateUserModal';
 import UserReportModal from './UserReportModal';
+import InvitationMessageModal from './InvitationMessageModal';
 import { getRiasecColors, type RiasecType } from '../../utils/riasecColors';
 
 const UserManagement: React.FC = () => {
@@ -17,6 +18,7 @@ const UserManagement: React.FC = () => {
     const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
     const [creatingUser, setCreatingUser] = useState(false);
     const [viewingReport, setViewingReport] = useState<number | null>(null);
+    const [invitationUser, setInvitationUser] = useState<AdminUser | null>(null);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -157,6 +159,9 @@ const UserManagement: React.FC = () => {
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Code
+                                        </th>
+                                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Utilisateur
                                         </th>
                                         <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
@@ -185,6 +190,11 @@ const UserManagement: React.FC = () => {
 
                                         return (
                                             <tr key={user.id} style={rowStyle}>
+                                                <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                    <span className="font-mono text-xs sm:text-sm font-semibold text-blue-600">
+                                                        {user.userCode || `ET-${String(user.id).padStart(4, '0')}`}
+                                                    </span>
+                                                </td>
                                                 <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                                                     <div className="flex items-center">
                                                         {dominantColors && user.testCompleted && user.allStepsCompleted && (
@@ -261,6 +271,13 @@ const UserManagement: React.FC = () => {
                                                                 <FileTextIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={() => setInvitationUser(user)}
+                                                            className="text-green-600 hover:text-green-900 p-1 sm:p-0"
+                                                            title="Générer le message d'invitation"
+                                                        >
+                                                            <MessageCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                        </button>
                                                         <button
                                                             onClick={() => setEditingUser(user)}
                                                             className="text-yellow-600 hover:text-yellow-900 p-1 sm:p-0"
@@ -378,6 +395,13 @@ const UserManagement: React.FC = () => {
                 <UserReportModal
                     userId={viewingReport}
                     onClose={() => setViewingReport(null)}
+                />
+            )}
+
+            {invitationUser && (
+                <InvitationMessageModal
+                    user={invitationUser}
+                    onClose={() => setInvitationUser(null)}
                 />
             )}
         </div>

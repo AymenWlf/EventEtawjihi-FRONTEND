@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuration de base d'Axios
 // En mode dev, utiliser localhost:8000, sinon utiliser la variable d'environnement ou l'URL de production
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8000/apis' : 'https://e-tawjihi.ma/apis');
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8000/apis' : 'https://apievent.e-tawjihi.ma/apis');
 
 // Instance Axios configurée
 export const apiClient = axios.create({

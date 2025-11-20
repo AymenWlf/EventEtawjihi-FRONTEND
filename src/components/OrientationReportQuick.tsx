@@ -606,6 +606,147 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
       setIsLoading(true);
       setError(null);
 
+      // Si userData est fourni et contient déjà les données normalisées, les utiliser directement
+      if (userData && Object.keys(userData).length > 0) {
+        // Vérifier si userData a déjà la structure complète attendue
+        if (userData.personalInfo || userData.riasecScores || userData.careerCompatibility) {
+          console.log("📊 Utilisation des données fournies en props (déjà normalisées)");
+          console.log("Données userData:", userData);
+          console.log("🔍 careerCompatibility dans userData:", userData.careerCompatibility);
+          console.log("🔍 detailedResponses:", userData.careerCompatibility?.detailedResponses);
+          console.log("🔍 careerAttractions:", userData.careerCompatibility?.careerAttractions);
+          console.log("🔍 sectorStats:", userData.careerCompatibility?.sectorStats);
+          
+          // S'assurer que careerCompatibility est normalisé
+          const normalizedUserData = {
+            ...userData,
+            careerCompatibility: (() => {
+              // Si déjà normalisé, retourner tel quel
+              if (userData.careerCompatibility?.detailedResponses || 
+                  userData.careerCompatibility?.careerAttractions || 
+                  userData.careerCompatibility?.sectorStats) {
+                return userData.careerCompatibility;
+              }
+              
+              // Sinon, normaliser
+              let careerData = userData.careerCompatibility || {};
+              if (careerData?.careers && typeof careerData.careers === 'object') {
+                careerData = careerData.careers;
+              }
+              
+              // Construire detailedResponses
+              let detailedResponses: Record<string, any> = {};
+              if (careerData?.enrichedCareerData) {
+                Object.entries(careerData.enrichedCareerData).forEach(([careerName, data]: [string, any]) => {
+                  detailedResponses[careerName] = {
+                    careerName: careerName,
+                    sector: data.sector,
+                    difficultyLevel: data.accessibility || 'Moyenne',
+                    attractionLevel: data.attractionLevel,
+                    accessibilityPerceived: data.accessibilityPerceived
+                  };
+                });
+              } else if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                careerData.careersEvaluated.forEach((career: any) => {
+                  detailedResponses[career.name] = {
+                    careerName: career.name,
+                    sector: career.sector,
+                    difficultyLevel: 'Moyenne',
+                    attractionLevel: career.attractionLevel,
+                    accessibilityPerceived: career.accessibilityPerceived
+                  };
+                });
+              }
+              
+              // Normaliser careerAttractions
+              let normalizedAttractions: Record<string, number> = {};
+              if (careerData?.careerAttractions && typeof careerData.careerAttractions === 'object') {
+                Object.entries(careerData.careerAttractions).forEach(([careerName, value]: [string, any]) => {
+                  if (typeof value === 'number') {
+                    normalizedAttractions[careerName] = value;
+                  } else if (value && typeof value === 'object' && value.attractionLevel !== undefined) {
+                    normalizedAttractions[careerName] = value.attractionLevel;
+                  }
+                });
+              }
+              
+              if (Object.keys(normalizedAttractions).length === 0 && Object.keys(detailedResponses).length > 0) {
+                Object.entries(detailedResponses).forEach(([careerName, details]: [string, any]) => {
+                  if (details.attractionLevel !== undefined && details.attractionLevel !== null) {
+                    normalizedAttractions[careerName] = details.attractionLevel;
+                  }
+                });
+              }
+              
+              // Construire sectorStats
+              let sectorStats: any[] = [];
+              if (careerData?.sectorScores && typeof careerData.sectorScores === 'object') {
+                const sectorCounts: Record<string, number> = {};
+                if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                  careerData.careersEvaluated.forEach((career: any) => {
+                    if (career.sector) {
+                      sectorCounts[career.sector] = (sectorCounts[career.sector] || 0) + 1;
+                    }
+                  });
+                } else if (careerData?.enrichedCareerData) {
+                  Object.values(careerData.enrichedCareerData).forEach((data: any) => {
+                    if (data.sector) {
+                      sectorCounts[data.sector] = (sectorCounts[data.sector] || 0) + 1;
+                    }
+                  });
+                } else if (Object.keys(detailedResponses).length > 0) {
+                  Object.values(detailedResponses).forEach((details: any) => {
+                    if (details.sector) {
+                      sectorCounts[details.sector] = (sectorCounts[details.sector] || 0) + 1;
+                    }
+                  });
+                }
+                
+                sectorStats = Object.entries(careerData.sectorScores)
+                  .map(([sector, score]: [string, any]) => ({
+                    sector,
+                    attractionScore: typeof score === 'number' ? score : 0,
+                    careersEvaluated: sectorCounts[sector] || 0
+                  }))
+                  .sort((a, b) => b.attractionScore - a.attractionScore);
+              }
+              
+              // Normaliser preferenceResponses
+              let preferenceResponses: Record<string, any> = {};
+              if (careerData?.workPreferences) {
+                preferenceResponses = {
+                  workStyle: careerData.workPreferences.workStyle || '',
+                  priority: careerData.workPreferences.priority || '',
+                  sector: careerData.workPreferences.sector || ''
+                };
+              } else if (careerData?.preferenceResponses) {
+                preferenceResponses = careerData.preferenceResponses;
+              }
+              
+              return {
+                ...careerData,
+                careerAttractions: Object.keys(normalizedAttractions).length > 0 ? normalizedAttractions : (careerData.careerAttractions || {}),
+                detailedResponses: Object.keys(detailedResponses).length > 0 ? detailedResponses : (careerData.detailedResponses || {}),
+                sectorScores: careerData.sectorScores || {},
+                sectorStats: sectorStats.length > 0 ? sectorStats : (careerData.sectorStats || []),
+                preferenceResponses: Object.keys(preferenceResponses).length > 0 ? preferenceResponses : (careerData.preferenceResponses || {})
+              };
+            })()
+          };
+          
+          console.log("✅ Données normalisées finales:", normalizedUserData);
+          console.log("✅ careerCompatibility normalisé:", normalizedUserData.careerCompatibility);
+          console.log("✅ detailedResponses count:", Object.keys(normalizedUserData.careerCompatibility?.detailedResponses || {}).length);
+          console.log("✅ careerAttractions count:", Object.keys(normalizedUserData.careerCompatibility?.careerAttractions || {}).length);
+          console.log("✅ sectorStats count:", normalizedUserData.careerCompatibility?.sectorStats?.length || 0);
+          
+          setUserReportData(normalizedUserData);
+          setIsCompleted(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       if (!isAuthenticated) {
         setIsLoading(false);
         setError(language === 'ar'
@@ -679,7 +820,125 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
             personalityScores: testData.currentStep.personality?.personality || testData.currentStep.personality || userData?.personalityScores || {},
             // aptitudeScores supprimé dans la version rapide
             academicInterests: testData.currentStep.interests?.interests || testData.currentStep.interests || userData?.academicInterests || {},
-            careerCompatibility: testData.currentStep.careerCompatibility?.careers || testData.currentStep.careerCompatibility || userData?.careerCompatibility || {},
+            careerCompatibility: (() => {
+                // Si userData a des données normalisées, les utiliser en priorité
+                if (userData?.careerCompatibility && typeof userData.careerCompatibility === 'object') {
+                    // Vérifier si les données sont déjà normalisées (ont detailedResponses, careerAttractions, etc.)
+                    if (userData.careerCompatibility.detailedResponses || userData.careerCompatibility.careerAttractions || userData.careerCompatibility.sectorStats) {
+                        return userData.careerCompatibility;
+                    }
+                }
+                
+                // Sinon, normaliser les données de l'API
+                let careerData = testData.currentStep.careerCompatibility?.careers || 
+                                testData.currentStep.careerCompatibility || 
+                                userData?.careerCompatibility || 
+                                {};
+                
+                // Si careerData a une propriété careers, l'utiliser
+                if (careerData?.careers && typeof careerData.careers === 'object') {
+                    careerData = careerData.careers;
+                }
+                
+                // Construire detailedResponses
+                let detailedResponses: Record<string, any> = {};
+                if (careerData?.enrichedCareerData) {
+                    Object.entries(careerData.enrichedCareerData).forEach(([careerName, data]: [string, any]) => {
+                        detailedResponses[careerName] = {
+                            careerName: careerName,
+                            sector: data.sector,
+                            difficultyLevel: data.accessibility || 'Moyenne',
+                            attractionLevel: data.attractionLevel,
+                            accessibilityPerceived: data.accessibilityPerceived
+                        };
+                    });
+                } else if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                    careerData.careersEvaluated.forEach((career: any) => {
+                        detailedResponses[career.name] = {
+                            careerName: career.name,
+                            sector: career.sector,
+                            difficultyLevel: 'Moyenne',
+                            attractionLevel: career.attractionLevel,
+                            accessibilityPerceived: career.accessibilityPerceived
+                        };
+                    });
+                }
+                
+                // Normaliser careerAttractions
+                let normalizedAttractions: Record<string, number> = {};
+                if (careerData?.careerAttractions && typeof careerData.careerAttractions === 'object') {
+                    Object.entries(careerData.careerAttractions).forEach(([careerName, value]: [string, any]) => {
+                        if (typeof value === 'number') {
+                            normalizedAttractions[careerName] = value;
+                        } else if (value && typeof value === 'object' && value.attractionLevel !== undefined) {
+                            normalizedAttractions[careerName] = value.attractionLevel;
+                        }
+                    });
+                }
+                
+                // Si careerAttractions est vide mais que detailedResponses existe, construire à partir de detailedResponses
+                if (Object.keys(normalizedAttractions).length === 0 && Object.keys(detailedResponses).length > 0) {
+                    Object.entries(detailedResponses).forEach(([careerName, details]: [string, any]) => {
+                        if (details.attractionLevel !== undefined && details.attractionLevel !== null) {
+                            normalizedAttractions[careerName] = details.attractionLevel;
+                        }
+                    });
+                }
+                
+                // Construire sectorStats
+                let sectorStats: any[] = [];
+                if (careerData?.sectorScores && typeof careerData.sectorScores === 'object') {
+                    const sectorCounts: Record<string, number> = {};
+                    if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                        careerData.careersEvaluated.forEach((career: any) => {
+                            if (career.sector) {
+                                sectorCounts[career.sector] = (sectorCounts[career.sector] || 0) + 1;
+                            }
+                        });
+                    } else if (careerData?.enrichedCareerData) {
+                        Object.values(careerData.enrichedCareerData).forEach((data: any) => {
+                            if (data.sector) {
+                                sectorCounts[data.sector] = (sectorCounts[data.sector] || 0) + 1;
+                            }
+                        });
+                    } else if (Object.keys(detailedResponses).length > 0) {
+                        Object.values(detailedResponses).forEach((details: any) => {
+                            if (details.sector) {
+                                sectorCounts[details.sector] = (sectorCounts[details.sector] || 0) + 1;
+                            }
+                        });
+                    }
+                    
+                    sectorStats = Object.entries(careerData.sectorScores)
+                        .map(([sector, score]: [string, any]) => ({
+                            sector,
+                            attractionScore: typeof score === 'number' ? score : 0,
+                            careersEvaluated: sectorCounts[sector] || 0
+                        }))
+                        .sort((a, b) => b.attractionScore - a.attractionScore);
+                }
+                
+                // Normaliser preferenceResponses
+                let preferenceResponses: Record<string, any> = {};
+                if (careerData?.workPreferences) {
+                    preferenceResponses = {
+                        workStyle: careerData.workPreferences.workStyle || '',
+                        priority: careerData.workPreferences.priority || '',
+                        sector: careerData.workPreferences.sector || ''
+                    };
+                } else if (careerData?.preferenceResponses) {
+                    preferenceResponses = careerData.preferenceResponses;
+                }
+                
+                return {
+                    ...careerData,
+                    careerAttractions: Object.keys(normalizedAttractions).length > 0 ? normalizedAttractions : (careerData.careerAttractions || {}),
+                    detailedResponses: Object.keys(detailedResponses).length > 0 ? detailedResponses : (careerData.detailedResponses || {}),
+                    sectorScores: careerData.sectorScores || {},
+                    sectorStats: sectorStats.length > 0 ? sectorStats : (careerData.sectorStats || []),
+                    preferenceResponses: Object.keys(preferenceResponses).length > 0 ? preferenceResponses : (careerData.preferenceResponses || {})
+                };
+            })(),
             constraints: testData.currentStep.constraints?.constraints || testData.currentStep.constraints || userData?.constraints || {},
             languageSkills: extractLanguageSkillsData(testData) || extractLanguageSkillsData(userData) || {},
 
@@ -733,7 +992,119 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
               riasecScores: userData.riasecScores || userData.currentStep?.riasec?.riasec || userData.currentStep?.riasec || {},
               personalityScores: userData.personalityScores || userData.currentStep?.personality?.personality || userData.currentStep?.personality || {},
               academicInterests: userData.academicInterests || userData.currentStep?.interests?.interests || userData.currentStep?.interests || {},
-              careerCompatibility: userData.careerCompatibility || userData.currentStep?.careerCompatibility?.careers || userData.currentStep?.careerCompatibility || {},
+              careerCompatibility: (() => {
+                // Si userData a des données normalisées, les utiliser
+                if (userData?.careerCompatibility && typeof userData.careerCompatibility === 'object') {
+                    if (userData.careerCompatibility.detailedResponses || userData.careerCompatibility.careerAttractions || userData.careerCompatibility.sectorStats) {
+                        return userData.careerCompatibility;
+                    }
+                }
+                
+                // Sinon, normaliser les données
+                let careerData = userData.careerCompatibility || userData.currentStep?.careerCompatibility?.careers || userData.currentStep?.careerCompatibility || {};
+                
+                if (careerData?.careers && typeof careerData.careers === 'object') {
+                    careerData = careerData.careers;
+                }
+                
+                // Construire detailedResponses
+                let detailedResponses: Record<string, any> = {};
+                if (careerData?.enrichedCareerData) {
+                    Object.entries(careerData.enrichedCareerData).forEach(([careerName, data]: [string, any]) => {
+                        detailedResponses[careerName] = {
+                            careerName: careerName,
+                            sector: data.sector,
+                            difficultyLevel: data.accessibility || 'Moyenne',
+                            attractionLevel: data.attractionLevel,
+                            accessibilityPerceived: data.accessibilityPerceived
+                        };
+                    });
+                } else if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                    careerData.careersEvaluated.forEach((career: any) => {
+                        detailedResponses[career.name] = {
+                            careerName: career.name,
+                            sector: career.sector,
+                            difficultyLevel: 'Moyenne',
+                            attractionLevel: career.attractionLevel,
+                            accessibilityPerceived: career.accessibilityPerceived
+                        };
+                    });
+                }
+                
+                // Normaliser careerAttractions
+                let normalizedAttractions: Record<string, number> = {};
+                if (careerData?.careerAttractions && typeof careerData.careerAttractions === 'object') {
+                    Object.entries(careerData.careerAttractions).forEach(([careerName, value]: [string, any]) => {
+                        if (typeof value === 'number') {
+                            normalizedAttractions[careerName] = value;
+                        } else if (value && typeof value === 'object' && value.attractionLevel !== undefined) {
+                            normalizedAttractions[careerName] = value.attractionLevel;
+                        }
+                    });
+                }
+                
+                if (Object.keys(normalizedAttractions).length === 0 && Object.keys(detailedResponses).length > 0) {
+                    Object.entries(detailedResponses).forEach(([careerName, details]: [string, any]) => {
+                        if (details.attractionLevel !== undefined && details.attractionLevel !== null) {
+                            normalizedAttractions[careerName] = details.attractionLevel;
+                        }
+                    });
+                }
+                
+                // Construire sectorStats
+                let sectorStats: any[] = [];
+                if (careerData?.sectorScores && typeof careerData.sectorScores === 'object') {
+                    const sectorCounts: Record<string, number> = {};
+                    if (careerData?.careersEvaluated && Array.isArray(careerData.careersEvaluated)) {
+                        careerData.careersEvaluated.forEach((career: any) => {
+                            if (career.sector) {
+                                sectorCounts[career.sector] = (sectorCounts[career.sector] || 0) + 1;
+                            }
+                        });
+                    } else if (careerData?.enrichedCareerData) {
+                        Object.values(careerData.enrichedCareerData).forEach((data: any) => {
+                            if (data.sector) {
+                                sectorCounts[data.sector] = (sectorCounts[data.sector] || 0) + 1;
+                            }
+                        });
+                    } else if (Object.keys(detailedResponses).length > 0) {
+                        Object.values(detailedResponses).forEach((details: any) => {
+                            if (details.sector) {
+                                sectorCounts[details.sector] = (sectorCounts[details.sector] || 0) + 1;
+                            }
+                        });
+                    }
+                    
+                    sectorStats = Object.entries(careerData.sectorScores)
+                        .map(([sector, score]: [string, any]) => ({
+                            sector,
+                            attractionScore: typeof score === 'number' ? score : 0,
+                            careersEvaluated: sectorCounts[sector] || 0
+                        }))
+                        .sort((a, b) => b.attractionScore - a.attractionScore);
+                }
+                
+                // Normaliser preferenceResponses
+                let preferenceResponses: Record<string, any> = {};
+                if (careerData?.workPreferences) {
+                    preferenceResponses = {
+                        workStyle: careerData.workPreferences.workStyle || '',
+                        priority: careerData.workPreferences.priority || '',
+                        sector: careerData.workPreferences.sector || ''
+                    };
+                } else if (careerData?.preferenceResponses) {
+                    preferenceResponses = careerData.preferenceResponses;
+                }
+                
+                return {
+                    ...careerData,
+                    careerAttractions: Object.keys(normalizedAttractions).length > 0 ? normalizedAttractions : (careerData.careerAttractions || {}),
+                    detailedResponses: Object.keys(detailedResponses).length > 0 ? detailedResponses : (careerData.detailedResponses || {}),
+                    sectorScores: careerData.sectorScores || {},
+                    sectorStats: sectorStats.length > 0 ? sectorStats : (careerData.sectorStats || []),
+                    preferenceResponses: Object.keys(preferenceResponses).length > 0 ? preferenceResponses : (careerData.preferenceResponses || {})
+                };
+              })(),
               constraints: userData.constraints || userData.currentStep?.constraints?.constraints || userData.currentStep?.constraints || {},
               languageSkills: extractLanguageSkillsData(userData) || {},
               testMetadata: userData.testMetadata || {
@@ -805,7 +1176,7 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
     };
 
     fetchuserReportData();
-  }, [isAuthenticated, token, language]); // Ne pas inclure userReportData dans les dépendances
+  }, [isAuthenticated, token, language, userData]); // Inclure userData pour utiliser les données normalisées
   const formatDuration = (duration: number) => {
     const minutes = Math.floor(duration / 60000);
     const seconds = Math.floor((duration % 60000) / 1000);
