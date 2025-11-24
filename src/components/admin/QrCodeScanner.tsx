@@ -251,6 +251,12 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({ onClose, onScan, onUserSc
                                 <h4 className="font-semibold text-green-900 mb-2">Utilisateur scanné avec succès</h4>
                                 <div className="space-y-2 text-sm">
                                     <div>
+                                        <span className="font-medium">Code:</span>{' '}
+                                        <span className="font-mono font-semibold text-blue-600">
+                                            {scannedData.user.userCode || `ET-${String(scannedData.user.id).padStart(4, '0')}`}
+                                        </span>
+                                    </div>
+                                    <div>
                                         <span className="font-medium">Nom:</span>{' '}
                                         {scannedData.user.firstName} {scannedData.user.lastName}
                                     </div>

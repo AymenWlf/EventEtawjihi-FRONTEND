@@ -8,6 +8,8 @@ import ReactDOMServer from 'react-dom/server';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 import { getAuthToken } from '../utils/auth';
+import { calculateCompositeRiasec } from '../utils/riasecCompositeCalculator';
+import { getRiasecColors, type RiasecType } from '../utils/riasecColors';
 
 
 interface OrientationReportQuickProps {
@@ -740,6 +742,20 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
           console.log("✅ careerAttractions count:", Object.keys(normalizedUserData.careerCompatibility?.careerAttractions || {}).length);
           console.log("✅ sectorStats count:", normalizedUserData.careerCompatibility?.sectorStats?.length || 0);
           
+          // Calculer le type RIASEC composite si pas déjà calculé
+          let compositeRiasec = normalizedUserData.analysis?.compositeRiasec;
+          if (!compositeRiasec) {
+            console.log("🔄 Calcul du type RIASEC composite...");
+            compositeRiasec = calculateCompositeRiasec(normalizedUserData);
+            console.log("✅ Type RIASEC composite calculé:", compositeRiasec);
+          }
+          
+          // Ajouter l'analyse avec le type composite
+          normalizedUserData.analysis = {
+            ...normalizedUserData.analysis,
+            compositeRiasec
+          };
+          
           setUserReportData(normalizedUserData);
           setIsCompleted(true);
           setIsLoading(false);
@@ -978,6 +994,17 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
           console.log("Données formatées pour le rapport:", formattedData);
           console.groupEnd();
 
+          // Calculer le type RIASEC composite
+          console.log("🔄 Calcul du type RIASEC composite...");
+          const compositeRiasec = calculateCompositeRiasec(formattedData);
+          console.log("✅ Type RIASEC composite calculé:", compositeRiasec);
+          
+          // Ajouter l'analyse avec le type composite
+          formattedData.analysis = {
+            ...formattedData.analysis,
+            compositeRiasec
+          };
+
           // Définir les données structurées pour le rapport
           setUserReportData(formattedData);
         } else {
@@ -1196,15 +1223,28 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
   };
 
   const generateExecutiveSummary = () => {
-    const riasec = userReportData.riasecScores?.dominantProfile || [];
+    // Utiliser le type RIASEC composite (cohérent avec l'admin)
+    let dominantRiasecName = 'Non déterminé';
+    if (userReportData?.analysis?.compositeRiasec?.dominantType) {
+      const dominantType = userReportData.analysis.compositeRiasec.dominantType as RiasecType;
+      const colors = getRiasecColors(dominantType);
+      dominantRiasecName = colors.name[language as 'fr' | 'ar'] || colors.name.fr;
+    } else if (userReportData?.riasecScores?.dominantProfile) {
+      // Fallback vers dominantProfile si compositeRiasec n'est pas disponible
+      const riasec = Array.isArray(userReportData.riasecScores.dominantProfile) 
+        ? userReportData.riasecScores.dominantProfile 
+        : [userReportData.riasecScores.dominantProfile];
+      dominantRiasecName = riasec.join('-');
+    }
+    
     const personality = userReportData.personalityScores?.dominantTraits || [];
     const topInterests = userReportData.academicInterests?.categoryStats || [];
 
     if (language === 'ar') {
-      return `لديك ملف شخصي ${riasec.join('-')} مع سمات شخصية قوية في ${personality.slice(0, 2).join(' و ')}. اهتماماتك الأكاديمية تركز على المجالات عالية الدرجات، مع توجه نحو التخصصات التي تتطلب ${userReportData.constraints?.educationProfile?.ambitionLevel || 'مستوى عالي'} من الدراسة.`;
+      return `لديك ملف شخصي ${dominantRiasecName} مع سمات شخصية قوية في ${personality.slice(0, 2).join(' و ')}. اهتماماتك الأكاديمية تركز على المجالات عالية الدرجات، مع توجه نحو التخصصات التي تتطلب ${userReportData.constraints?.educationProfile?.ambitionLevel || 'مستوى عالي'} من الدراسة.`;
     }
 
-    return `Vous présentez un profil ${riasec.join('-')} avec des traits de personnalité dominants en ${personality.slice(0, 2).join(' et ')}. Vos intérêts académiques se concentrent sur les domaines à forte compatibilité, avec une orientation vers des études de niveau ${userReportData.constraints?.educationProfile?.ambitionLevel || 'élevé'}.`;
+    return `Vous présentez un profil ${dominantRiasecName} avec des traits de personnalité dominants en ${personality.slice(0, 2).join(' et ')}. Vos intérêts académiques se concentrent sur les domaines à forte compatibilité, avec une orientation vers des études de niveau ${userReportData.constraints?.educationProfile?.ambitionLevel || 'élevé'}.`;
   };
 
   // Fonction pour marquer le test comme complété
@@ -1446,11 +1486,12 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
 
   const getDynamicRecommendations = (userReportData: any, t: any) => {
     const recs: string[] = [];
-    // RIASEC
-    if (userReportData.riasecScores?.dominantProfile?.includes('Social')) {
+    // RIASEC - Utiliser le type composite
+    const dominantType = userReportData?.analysis?.compositeRiasec?.dominantType;
+    if (dominantType === 'S' || userReportData.riasecScores?.dominantProfile?.includes('Social')) {
       recs.push("Vous excellez dans les métiers d'accompagnement, d'enseignement ou de santé.");
     }
-    if (userReportData.riasecScores?.dominantProfile?.includes('Investigateur')) {
+    if (dominantType === 'I' || userReportData.riasecScores?.dominantProfile?.includes('Investigateur')) {
       recs.push("Les domaines scientifiques et d'ingénierie vous correspondent.");
     }
     // Personality
@@ -1888,11 +1929,32 @@ const OrientationReportQuick: React.FC<OrientationReportQuickProps> = ({ userDat
             />
           </div>
           <div className={`flex flex-wrap gap-2 mt-3 sm:mt-4 ${language === 'ar' ? 'justify-end' : ''}`}>
-            {userReportData.riasecScores?.dominantProfile?.map((p: string) => (
-              <span key={p} className="px-2 sm:px-3 py-1 rounded-full bg-purple-100 text-purple-700 font-semibold text-xs sm:text-sm">
-                {riasecCategories[language as 'fr' | 'ar'][p as keyof typeof riasecCategories['fr']] || p}
-              </span>
-            ))}
+            {/* Utiliser le type RIASEC composite (cohérent avec l'admin) */}
+            {(() => {
+              // Priorité au type composite
+              if (userReportData?.analysis?.compositeRiasec?.dominantType) {
+                const dominantType = userReportData.analysis.compositeRiasec.dominantType as RiasecType;
+                const colors = getRiasecColors(dominantType);
+                const name = colors.name[language as 'fr' | 'ar'] || colors.name.fr;
+                return (
+                  <span key={dominantType} className="px-2 sm:px-3 py-1 rounded-full bg-purple-100 text-purple-700 font-semibold text-xs sm:text-sm">
+                    {name}
+                  </span>
+                );
+              }
+              // Fallback vers dominantProfile si compositeRiasec n'est pas disponible
+              if (userReportData.riasecScores?.dominantProfile) {
+                const profiles = Array.isArray(userReportData.riasecScores.dominantProfile) 
+                  ? userReportData.riasecScores.dominantProfile 
+                  : [userReportData.riasecScores.dominantProfile];
+                return profiles.map((p: string) => (
+                  <span key={p} className="px-2 sm:px-3 py-1 rounded-full bg-purple-100 text-purple-700 font-semibold text-xs sm:text-sm">
+                    {riasecCategories[language as 'fr' | 'ar'][p as keyof typeof riasecCategories['fr']] || p}
+                  </span>
+                ));
+              }
+              return null;
+            })()}
           </div>
           <div className={`mt-2 text-xs sm:text-sm text-gray-500 ${language === 'ar' ? 'text-right' : ''}`}>
             {language === 'ar' ? "متوسط الوقت لكل سؤال" : "Temps moyen par question"}:

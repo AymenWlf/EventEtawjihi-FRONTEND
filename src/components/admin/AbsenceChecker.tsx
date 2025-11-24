@@ -116,6 +116,9 @@ const AbsenceChecker: React.FC = () => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Code
+                                    </th>
+                                    <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Utilisateur
                                     </th>
                                     <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
@@ -140,6 +143,11 @@ const AbsenceChecker: React.FC = () => {
 
                                     return (
                                         <tr key={user.id} className={user.isPresent ? 'bg-green-50' : ''}>
+                                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+                                                <span className="font-mono text-xs sm:text-sm font-semibold text-blue-600">
+                                                    {user.userCode || `ET-${String(user.id).padStart(4, '0')}`}
+                                                </span>
+                                            </td>
                                             <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                                                 <div className="flex items-center">
                                                     {dominantColors && user.testCompleted && user.allStepsCompleted && (

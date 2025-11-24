@@ -5,6 +5,7 @@ export interface AdminUser {
     lastName: string | null;
     email: string;
     telephone: string | null;
+    whatsappNumber: string | null;
     age: number | null;
     createdAt: string | null;
     lastLoginAt: string | null;
@@ -73,6 +74,7 @@ export interface QrScanResponse {
     data: {
         user: {
             id: number;
+            userCode: string | null;
             firstName: string | null;
             lastName: string | null;
             email: string;

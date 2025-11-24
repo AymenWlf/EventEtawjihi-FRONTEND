@@ -113,6 +113,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onComplete, onPrevi
 
   const [formData, setFormData] = useState({
     phoneNumber: '', // AJOUT DU NUMÉRO DE TÉLÉPHONE
+    whatsappNumber: '', // NUMÉRO WHATSAPP
     firstName: '',
     lastName: '',
     age: '',
@@ -706,6 +707,24 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onComplete, onPrevi
                 ? 'مثال: 0612345678'
                 : 'Exemple: 0612345678'
             )}
+          </p>
+        </div>
+        {/* CHAMP NUMÉRO WHATSAPP */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {language === 'ar' ? 'رقم الواتساب' : 'Numéro WhatsApp'}
+          </label>
+          <input
+            type="tel"
+            value={formData.whatsappNumber}
+            onChange={(e) => handleChange('whatsappNumber', e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder={language === 'ar' ? '06XXXXXXXX' : '06XXXXXXXX'}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            {language === 'ar'
+              ? 'مثال: 0612345678 (اختياري)'
+              : 'Exemple: 0612345678 (optionnel)'}
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
